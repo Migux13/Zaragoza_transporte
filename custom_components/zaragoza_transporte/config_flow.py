@@ -3,6 +3,9 @@ import voluptuous as vol
 from .const import DOMAIN, PARADAS
 from . import gtfs
 
+OPCION_COMBINADAS = "Todas - combinadas"
+OPCION_POR_LINEA = "Todas - una entidad por línea"
+
 
 class ZaragozaTransporteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
@@ -50,7 +53,7 @@ class ZaragozaTransporteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Elegir cómo localizar el poste de bus."""
         if user_input is not None:
             modo = user_input["modo"]
-            if modo == "Por número de poste":
+            if modo == "Por número de parada":
                 return await self.async_step_bus_numero()
             if modo == "Por nombre de parada":
                 return await self.async_step_bus_nombre()
@@ -59,8 +62,8 @@ class ZaragozaTransporteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="bus",
             data_schema=vol.Schema({
-                vol.Required("modo", default="Por número de poste"): vol.In([
-                    "Por número de poste",
+                vol.Required("modo", default="Por número de parada"): vol.In([
+                    "Por número de parada",
                     "Por nombre de parada",
                     "Paradas cercanas",
                 ]),
@@ -71,19 +74,19 @@ class ZaragozaTransporteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Poste por número de marquesina, validado contra el catálogo GTFS."""
         errors = {}
         if user_input is not None:
-            poste = user_input["poste"].strip()
+            poste = user_input["parada"].strip()
             datos = None
             if poste.isdigit():
                 datos = await self.hass.async_add_executor_job(gtfs.get_poste, poste)
             if datos is None:
-                errors["base"] = "invalid_poste"
+                errors["base"] = "invalid_parada"
             else:
                 self._poste = str(int(poste))
                 return await self.async_step_bus_linea()
 
         return self.async_show_form(
             step_id="bus_numero",
-            data_schema=vol.Schema({vol.Required("poste"): str}),
+            data_schema=vol.Schema({vol.Required("parada"): str}),
             errors=errors,
         )
 
@@ -134,37 +137,44 @@ class ZaragozaTransporteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_bus_linea(self, user_input=None):
-        """Elegir línea concreta o todas las del poste, y crear la entrada."""
+        """Elegir línea concreta, todas combinadas, o una entidad por línea."""
         datos = await self.hass.async_add_executor_job(gtfs.get_poste, self._poste)
-        opciones = ["Todas"] + datos["lineas"]
+        opciones = [OPCION_COMBINADAS, OPCION_POR_LINEA] + datos["lineas"]
 
         if user_input is not None:
             linea = user_input["linea"]
-            linea = "" if linea == "Todas" else linea
+            modo_por_linea = linea == OPCION_POR_LINEA
+            if linea in (OPCION_COMBINADAS, OPCION_POR_LINEA):
+                linea = ""
 
-            unique_id = f"bus_{self._poste}_{linea}" if linea else f"bus_{self._poste}"
+            unique_id = f"bus_{self._poste}_{linea}" if linea else (
+                f"bus_{self._poste}_por_linea" if modo_por_linea else f"bus_{self._poste}_combinadas"
+            )
             await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured()
 
             title = f"Bus {datos['nombre']} ({self._poste})"
             if linea:
                 title += f" línea {linea}"
-            return self.async_create_entry(
-                title=title,
-                data={
-                    "tipo": "bus",
-                    "poste": self._poste,
-                    "linea": linea,
-                    "nombre": datos["nombre"],
-                    "lat": datos["lat"],
-                    "lon": datos["lon"],
-                    "lineas": datos["lineas"],
-                },
-            )
+            elif modo_por_linea:
+                title += " (una entidad por línea)"
+
+            data = {
+                "tipo": "bus",
+                "poste": self._poste,
+                "linea": linea,
+                "nombre": datos["nombre"],
+                "lat": datos["lat"],
+                "lon": datos["lon"],
+            }
+            if modo_por_linea:
+                data["modo"] = "por_linea"
+                data["lineas"] = datos["lineas"]
+            return self.async_create_entry(title=title, data=data)
 
         return self.async_show_form(
             step_id="bus_linea",
             data_schema=vol.Schema({
-                vol.Required("linea", default="Todas"): vol.In(opciones),
+                vol.Required("linea", default=OPCION_COMBINADAS): vol.In(opciones),
             }),
         )

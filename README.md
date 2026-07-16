@@ -7,9 +7,9 @@ Proyecto derivado de [Zaragoza_tram](https://github.com/jrgim/Zaragoza_tram) de 
 ## Características
 
 - **Tranvía**: sensores de próximos dos tranvías por parada (funcionalidad del proyecto original).
-- **Autobús urbano**: sensores de próximo y siguiente bus por poste, con línea concreta o todas las líneas del poste.
-- **Asistente de configuración** desde la interfaz: busca la parada de bus por número de poste, **por nombre** (sin necesidad de tildes) o **por cercanía** a tu Home Assistant.
-- **Catálogo GTFS incluido**: 934 postes con nombre real, coordenadas y líneas, derivado del GTFS oficial del [NAP del Ministerio de Transportes](https://nap.transportes.gob.es) (datos de Avanza Zaragoza S.A.U. y Tranvías Urbanos de Zaragoza S.L.).
+- **Autobús urbano**: sensores de próximo y siguiente bus por parada. Con una línea concreta, muestran esa línea; con "Todas - combinadas", mezclan las llegadas de todas las líneas de la parada y muestran la línea como atributo (`linea`), ideal para una tarjeta de "próximos autobuses"; con "Todas - una entidad por línea", crean un par próximo/siguiente por cada línea.
+- **Asistente de configuración** desde la interfaz: busca la parada de bus por número, **por nombre** (sin necesidad de tildes) o **por cercanía** a tu Home Assistant.
+- **Catálogo GTFS incluido**: 934 paradas con nombre real, coordenadas y líneas, derivado del GTFS oficial del [NAP del Ministerio de Transportes](https://nap.transportes.gob.es) (datos de Avanza Zaragoza S.A.U. y Tranvías Urbanos de Zaragoza S.L.).
 - Los sensores de bus exponen `latitude`/`longitude`: la parada se muestra en la tarjeta de **mapa** de Home Assistant.
 - Estado en **minutos** (número): `0` = en la parada, `unknown` = sin estimación. El texto original de la API queda como atributo.
 - Tolerancia a fallos: la API municipal es inestable; si falla o devuelve un error, el componente hace **fallback automático a la web de tiempos de Avanza** y lo indica en el atributo `fuente` del sensor. Si ambas fallan, conserva el último dato válido.

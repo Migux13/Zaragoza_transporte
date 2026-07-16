@@ -16,7 +16,6 @@ def parse_minutos(texto):
     return int(match.group(1)) if match else None
 
 
-
 RE_CELDAS = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.IGNORECASE | re.DOTALL)
 RE_FILAS = re.compile(r"<tr[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
 RE_TAGS = re.compile(r"<[^>]+>")
@@ -61,8 +60,10 @@ def _fetch_avanza(poste):
         if len(celdas) < 3:
             continue
         linea, destino, tiempo = celdas[0], celdas[1], celdas[2]
-        if not linea or "linea" in linea.lower() or not RE_MINUTOS.search(tiempo):
-            continue  # cabecera u otra fila sin tiempo
+        if not linea or "linea" in linea.lower():
+            continue  # cabecera
+        if "parada" not in tiempo.lower() and not RE_MINUTOS.search(tiempo):
+            continue  # fila sin tiempo válido (p. ej. la de accesibilidad)
         clave = (linea, destino)
         if clave not in agrupado:
             agrupado[clave] = {"linea": linea, "destino": destino,
@@ -85,18 +86,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
         lon = entry.data.get("lon")
         linea_filtro = entry.data.get("linea") or None
 
-        if linea_filtro:
-            lineas = [linea_filtro]
+        if not linea_filtro and entry.data.get("modo") == "por_linea":
+            # Una entidad por línea: un par próximo/siguiente por cada
+            # línea descubierta del GTFS al configurar la parada.
+            entities = []
+            for linea in entry.data.get("lineas", []):
+                entities.append(ZaragozaBusSensor(poste, linea, 1, nombre, lat, lon))
+                entities.append(ZaragozaBusSensor(poste, linea, 2, nombre, lat, lon))
+            async_add_entities(entities)
         else:
-            # líneas descubiertas del GTFS al configurar; entradas antiguas
-            # sin este dato crean un par de sensores genéricos del poste
-            lineas = entry.data.get("lineas") or [None]
-
-        entities = []
-        for linea in lineas:
-            entities.append(ZaragozaBusSensor(poste, linea, 1, nombre, lat, lon))
-            entities.append(ZaragozaBusSensor(poste, linea, 2, nombre, lat, lon))
-        async_add_entities(entities)
+            # Sin línea concreta (modo combinado, por defecto), cada sensor
+            # mezcla las llegadas de todas las líneas de la parada (línea
+            # como atributo, ver ZaragozaBusSensor).
+            async_add_entities([
+                ZaragozaBusSensor(poste, linea_filtro, 1, nombre, lat, lon),
+                ZaragozaBusSensor(poste, linea_filtro, 2, nombre, lat, lon),
+            ])
     else:
         stop_id = entry.data.get("stop_id")
         stop_name = entry.data.get("stop_name")
@@ -146,7 +151,13 @@ class ZaragozaTramSensor(SensorEntity):
 
 
 class ZaragozaBusSensor(SensorEntity):
-    """Bus N (1=próximo, 2=siguiente) en un poste, opcionalmente filtrado por línea."""
+    """Bus N (1=próximo, 2=siguiente) en un poste, opcionalmente filtrado por línea.
+
+    Sin filtro de línea, "próximo"/"siguiente" son las dos llegadas más
+    cercanas de CUALQUIER línea que pase por la parada (no siempre coinciden
+    con el "primero"/"segundo" de una única línea): la API devuelve las
+    líneas en un orden que no está garantizado que sea por tiempo de llegada.
+    """
 
     _attr_icon = "mdi:bus"
     _attr_native_unit_of_measurement = "min"
@@ -161,7 +172,7 @@ class ZaragozaBusSensor(SensorEntity):
         self._state = None
         self._attrs = {}
 
-        lugar = nombre or f"Poste {poste}"
+        lugar = nombre or f"Parada {poste}"
         etiqueta = "próximo" if bus_number == 1 else "siguiente"
         if linea:
             self._name = f"Bus {linea} {etiqueta} - {lugar}"
@@ -181,7 +192,7 @@ class ZaragozaBusSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         attrs = dict(self._attrs)
-        attrs["poste"] = self._poste
+        attrs["numero_parada"] = self._poste
         if self._nombre:
             attrs.setdefault("parada", self._nombre)
         if self._lat is not None and self._lon is not None:
@@ -203,18 +214,37 @@ class ZaragozaBusSensor(SensorEntity):
 
         if self._linea:
             destinos = [d for d in destinos if d.get("linea", "").upper() == self._linea.upper()]
+            if not destinos:
+                self._state = None
+                self._attrs = {"fuente": fuente}
+                return
+            destino = destinos[0]
+            campo = "primero" if self._bus_number == 1 else "segundo"
+            self._set_estado(fuente, destino, campo)
+            return
 
-        if not destinos:
+        # Sin filtro: mezclamos las llegadas (primero y segundo) de todas
+        # las líneas de la parada y nos quedamos con la N-ésima más próxima.
+        llegadas = []
+        for destino in destinos:
+            for campo in ("primero", "segundo"):
+                minutos = parse_minutos(destino.get(campo))
+                if minutos is not None:
+                    llegadas.append((minutos, destino, campo))
+        llegadas.sort(key=lambda item: item[0])
+
+        if len(llegadas) < self._bus_number:
             self._state = None
             self._attrs = {"fuente": fuente}
             return
 
-        destino = destinos[0]
-        campo = "primero" if self._bus_number == 1 else "segundo"
+        _, destino, campo = llegadas[self._bus_number - 1]
+        self._set_estado(fuente, destino, campo)
+
+    def _set_estado(self, fuente, destino, campo):
         self._state = parse_minutos(destino.get(campo))
         self._attrs = {
             "fuente": fuente,
-            "parada": data.get("title"),
             "linea": destino.get("linea"),
             "destino": destino.get("destino"),
             "texto_original": destino.get(campo),

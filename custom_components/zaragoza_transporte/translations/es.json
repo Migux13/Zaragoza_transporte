@@ -14,9 +14,9 @@
                 "data": { "modo": "¿Cómo quieres buscar la parada?" }
             },
             "bus_numero": {
-                "title": "Poste por número",
+                "title": "Parada por número",
                 "description": "El número aparece en la marquesina de la parada.",
-                "data": { "poste": "Número de poste" }
+                "data": { "parada": "Número de parada" }
             },
             "bus_nombre": {
                 "title": "Buscar por nombre",
@@ -29,12 +29,12 @@
             },
             "bus_linea": {
                 "title": "Línea",
-                "description": "Con \"Todas\" se crean sensores de cada línea del poste.",
+                "description": "\"Todas - combinadas\" crea próximo/siguiente mezclando todas las líneas de la parada; \"Todas - una entidad por línea\" crea un par próximo/siguiente por cada línea.",
                 "data": { "linea": "Línea" }
             }
         },
         "error": {
-            "invalid_poste": "Ese poste no está en el catálogo de paradas",
+            "invalid_parada": "Esa parada no está en el catálogo",
             "no_results": "Sin resultados; prueba con otro texto"
         },
         "abort": {
