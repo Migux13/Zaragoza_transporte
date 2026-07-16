@@ -1,0 +1,9 @@
+{
+    "name": "Zaragoza Transporte",
+    "render_readme": true,
+    "content_in_root": false,
+    "zip_release": false,
+    "country": [
+        "ES"
+    ]
+}
