@@ -119,6 +119,7 @@ class ZaragozaTramSensor(SensorEntity):
         self._state = None
         self._name = f"Tranvía {tram_number} - {stop_name}"
         self._attr_icon = "mdi:tram"
+        self.entity_id = f"sensor.tranvia_{tram_number}_parada_{stop_id}"
 
     @property
     def name(self):
@@ -174,12 +175,15 @@ class ZaragozaBusSensor(SensorEntity):
 
         lugar = nombre or f"Parada {poste}"
         etiqueta = "próximo" if bus_number == 1 else "siguiente"
+        etiqueta_id = "proximo" if bus_number == 1 else "siguiente"
         if linea:
             self._name = f"Bus {linea} {etiqueta} - {lugar}"
             self._attr_unique_id = f"{DOMAIN}_bus_{poste}_{linea}_{bus_number}"
+            self.entity_id = f"sensor.bus_{linea.lower()}_{etiqueta_id}_parada_{poste}"
         else:
             self._name = f"Bus {etiqueta} - {lugar}"
             self._attr_unique_id = f"{DOMAIN}_bus_{poste}_{bus_number}"
+            self.entity_id = f"sensor.bus_{etiqueta_id}_parada_{poste}"
 
     @property
     def name(self):
