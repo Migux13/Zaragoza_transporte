@@ -1,0 +1,44 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Zaragoza Transporte",
+                "data": { "tipo": "¿Qué quieres añadir?" }
+            },
+            "tram": {
+                "title": "Parada de tranvía",
+                "data": { "stop_name": "Parada" }
+            },
+            "bus": {
+                "title": "Parada de autobús",
+                "data": { "modo": "¿Cómo quieres buscar la parada?" }
+            },
+            "bus_numero": {
+                "title": "Poste por número",
+                "description": "El número aparece en la marquesina de la parada.",
+                "data": { "poste": "Número de poste" }
+            },
+            "bus_nombre": {
+                "title": "Buscar por nombre",
+                "description": "Búsqueda parcial; no hacen falta tildes.",
+                "data": { "nombre": "Nombre de la parada o calle" }
+            },
+            "bus_elegir": {
+                "title": "Elige la parada",
+                "data": { "parada": "Parada" }
+            },
+            "bus_linea": {
+                "title": "Línea",
+                "description": "Con \"Todas\" se crean sensores de cada línea del poste.",
+                "data": { "linea": "Línea" }
+            }
+        },
+        "error": {
+            "invalid_poste": "Ese poste no está en el catálogo de paradas",
+            "no_results": "Sin resultados; prueba con otro texto"
+        },
+        "abort": {
+            "already_configured": "Esta parada ya está configurada"
+        }
+    }
+}

@@ -12,7 +12,7 @@ Proyecto derivado de [Zaragoza_tram](https://github.com/jrgim/Zaragoza_tram) de 
 - **Catálogo GTFS incluido**: 934 postes con nombre real, coordenadas y líneas, derivado del GTFS oficial del [NAP del Ministerio de Transportes](https://nap.transportes.gob.es) (datos de Avanza Zaragoza S.A.U. y Tranvías Urbanos de Zaragoza S.L.).
 - Los sensores de bus exponen `latitude`/`longitude`: la parada se muestra en la tarjeta de **mapa** de Home Assistant.
 - Estado en **minutos** (número): `0` = en la parada, `unknown` = sin estimación. El texto original de la API queda como atributo.
-- Tolerancia a fallos: la API municipal es inestable; los sensores conservan el último dato válido ante errores puntuales.
+- Tolerancia a fallos: la API municipal es inestable; si falla o devuelve un error, el componente hace **fallback automático a la web de tiempos de Avanza** y lo indica en el atributo `fuente` del sensor. Si ambas fallan, conserva el último dato válido.
 
 ## Instalación
 
@@ -43,7 +43,6 @@ y coloca el `postes_bus.json` resultante en `custom_components/zaragoza_transpor
 
 ## Hoja de ruta
 
-- Fallback a la web de tiempos de Avanza cuando el proxy municipal falle.
 - Soporte GTFS-RT si Avanza publica el feed de tiempo real (ya lo suministra a terceros).
 
 ## Créditos

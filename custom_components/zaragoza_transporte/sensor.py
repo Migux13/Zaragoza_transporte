@@ -1,7 +1,7 @@
 import re
 import requests
 from homeassistant.components.sensor import SensorEntity
-from .const import DOMAIN, API_URL, BUS_API_URL
+from .const import DOMAIN, API_URL, BUS_API_URL, BUS_AVANZA_URL
 
 RE_MINUTOS = re.compile(r"(\d+)\s*min", re.IGNORECASE)
 
@@ -14,6 +14,65 @@ def parse_minutos(texto):
         return 0
     match = RE_MINUTOS.search(texto)
     return int(match.group(1)) if match else None
+
+
+
+RE_CELDAS = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.IGNORECASE | re.DOTALL)
+RE_FILAS = re.compile(r"<tr[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
+RE_TAGS = re.compile(r"<[^>]+>")
+
+
+def _fetch_ayuntamiento(poste):
+    """Destinos desde la API municipal, o None si falla o devuelve error."""
+    try:
+        response = requests.get(BUS_API_URL.format(poste=poste), timeout=15)
+    except requests.RequestException:
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        data = response.json()
+    except ValueError:
+        return None
+    # el proxy devuelve a veces errores como JSON (p. ej. {"status": 400, ...})
+    if "status" in data or "error" in data or "destinos" not in data:
+        return None
+    return data.get("destinos", [])
+
+
+def _fetch_avanza(poste):
+    """Destinos desde la web de tiempos de Avanza (HTML), o None si falla.
+
+    Parsea la tabla LINEA/DESTINO/MIN. y agrupa por (linea, destino): la
+    primera aparición es el primer bus y la segunda, el siguiente, imitando
+    el formato de la API municipal.
+    """
+    try:
+        response = requests.get(BUS_AVANZA_URL.format(poste=poste), timeout=15)
+    except requests.RequestException:
+        return None
+    if response.status_code != 200:
+        return None
+
+    agrupado = {}
+    orden = []
+    for fila in RE_FILAS.findall(response.text):
+        celdas = [RE_TAGS.sub("", c).strip() for c in RE_CELDAS.findall(fila)]
+        if len(celdas) < 3:
+            continue
+        linea, destino, tiempo = celdas[0], celdas[1], celdas[2]
+        if not linea or "linea" in linea.lower() or not RE_MINUTOS.search(tiempo):
+            continue  # cabecera u otra fila sin tiempo
+        clave = (linea, destino)
+        if clave not in agrupado:
+            agrupado[clave] = {"linea": linea, "destino": destino,
+                               "primero": tiempo, "segundo": None}
+            orden.append(clave)
+        elif agrupado[clave]["segundo"] is None:
+            agrupado[clave]["segundo"] = tiempo
+    if not orden:
+        return None
+    return [agrupado[k] for k in orden]
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -132,35 +191,31 @@ class ZaragozaBusSensor(SensorEntity):
         return attrs
 
     def update(self):
-        try:
-            response = requests.get(BUS_API_URL.format(poste=self._poste), timeout=15)
-        except requests.RequestException:
-            # La API del SAE falla a menudo: conservamos el último dato
+        fuente = "ayuntamiento"
+        destinos = _fetch_ayuntamiento(self._poste)
+        if destinos is None:
+            # el proxy municipal falla o devolvió un error: probamos Avanza
+            destinos = _fetch_avanza(self._poste)
+            fuente = "avanza"
+        if destinos is None:
+            # ambas fuentes caídas: conservamos el último dato
             return
 
-        if response.status_code != 200:
-            return
-
-        try:
-            data = response.json()
-        except ValueError:
-            return
-
-        destinos = data.get("destinos", [])
         if self._linea:
-            destinos = [d for d in destinos if d.get("linea", "").upper() == self._linea]
+            destinos = [d for d in destinos if d.get("linea", "").upper() == self._linea.upper()]
 
         if not destinos:
             self._state = None
+            self._attrs = {"fuente": fuente}
             return
 
         destino = destinos[0]
         campo = "primero" if self._bus_number == 1 else "segundo"
         self._state = parse_minutos(destino.get(campo))
         self._attrs = {
+            "fuente": fuente,
             "parada": data.get("title"),
             "linea": destino.get("linea"),
             "destino": destino.get("destino"),
             "texto_original": destino.get(campo),
-            "ultima_actualizacion_api": data.get("lastUpdated"),
         }
