@@ -168,11 +168,8 @@ class ZaragozaBusSensor(SensorEntity):
         self._linea = linea
         self._bus_number = bus_number
         self._nombre = nombre
-        # Solo el sensor "próximo" expone coordenadas: como próximo y
-        # siguiente comparten parada (misma lat/lon), mostrar ambos en el
-        # mapa los superpondría en el mismo punto.
-        self._lat = lat if bus_number == 1 else None
-        self._lon = lon if bus_number == 1 else None
+        self._lat = lat
+        self._lon = lon
         self._state = None
         self._attrs = {}
 
