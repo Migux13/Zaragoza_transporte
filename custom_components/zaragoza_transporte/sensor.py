@@ -163,12 +163,20 @@ class ZaragozaBusSensor(SensorEntity):
     _attr_icon = "mdi:bus"
     _attr_native_unit_of_measurement = "min"
 
+    # Separación (en grados) entre próximo y siguiente en el mapa: comparten
+    # parada, así que sin esto sus marcadores caerían en el mismo punto y se
+    # taparían entre sí. ~4-5 m, imperceptible a escala de calle.
+    _OFFSET_MAPA = 0.00004
+
     def __init__(self, poste, linea, bus_number, nombre=None, lat=None, lon=None):
         self._poste = poste
         self._linea = linea
         self._bus_number = bus_number
         self._nombre = nombre
-        self._lat = lat
+        if lat is not None and lon is not None:
+            self._lat = lat + (self._OFFSET_MAPA if bus_number == 1 else -self._OFFSET_MAPA)
+        else:
+            self._lat = lat
         self._lon = lon
         self._state = None
         self._attrs = {}
