@@ -1,5 +1,7 @@
 # Zaragoza Transporte
 
+<img src="logo.png" alt="Logo Zaragoza Transporte" width="150">
+
 Integración de Home Assistant para el transporte urbano de Zaragoza: **tranvía y autobús** con tiempos de llegada en tiempo real.
 
 Proyecto derivado de [Zaragoza_tram](https://github.com/jrgim/Zaragoza_tram) de @jrgim (licencia MIT), ampliado con soporte de autobús urbano y catálogo GTFS de paradas.
