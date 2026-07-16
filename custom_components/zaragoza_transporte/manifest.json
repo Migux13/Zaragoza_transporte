@@ -2,13 +2,13 @@
     "domain": "zaragoza_transporte",
     "name": "Zaragoza Transporte",
     "codeowners": [
-        "@TU_USUARIO"
+        "@Migux13"
     ],
     "config_flow": true,
     "dependencies": [],
-    "documentation": "https://github.com/TU_USUARIO/Zaragoza_transporte",
+    "documentation": "https://github.com/Migux13/Zaragoza_transporte",
     "iot_class": "cloud_polling",
-    "issue_tracker": "https://github.com/TU_USUARIO/Zaragoza_transporte/issues",
+    "issue_tracker": "https://github.com/Migux13/Zaragoza_transporte/issues",
     "requirements": [
         "requests"
     ],
