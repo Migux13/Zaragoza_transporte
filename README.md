@@ -26,6 +26,8 @@ Proyecto derivado de [Zaragoza_tram](https://github.com/jrgim/Zaragoza_tram) de 
 ### Manual
 Copia `custom_components/zaragoza_transporte` a tu carpeta `custom_components` y reinicia.
 
+> **Nota sobre el icono:** desde HA 2026.3 la integración incluye su propio icono en `custom_components/zaragoza_transporte/brand/` (sin depender de una PR a `home-assistant/brands`, vía cerrada para integraciones custom nuevas). Ya funciona en **Ajustes → Dispositivos y servicios**; en la ficha del repositorio dentro de la propia tienda de HACS puede seguir sin verse ("icon not available") hasta que HACS actualice su código para leer esta carpeta local — no depende de este repositorio.
+
 ## Configuración
 
 **Ajustes → Dispositivos e integraciones → Añadir integración → Zaragoza Transporte**, elige Tranvía o Bus y sigue el asistente.
