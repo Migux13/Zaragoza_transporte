@@ -77,12 +77,21 @@ def login(session: requests.Session) -> None:
         timeout=30,
     )
     resp.raise_for_status()
+    print(f"[debug] tras POST login: status={resp.status_code} url_final={resp.url}")
+    if re.search(r"field-validation-error|text-danger|ValidationSummary|credenciales", resp.text, re.IGNORECASE):
+        m = re.search(
+            r'(?:field-validation-error|text-danger|ValidationSummary)[^>]*>([^<]{1,200})', resp.text, re.IGNORECASE
+        )
+        print(f"[debug] posible mensaje de error de login: {m.group(1).strip() if m else '(no extraído)'}")
 
 
 def extraer_enlace_descarga(html: str) -> str:
     for href, contenido in RE_ENLACES.findall(html):
         if RE_DESCARGA_TEXTO.search(contenido):
             return href
+    # Diagnóstico: ¿aparece "escargar" en algún sitio y con qué pinta?
+    for m in re.finditer(r".{80}[Dd]escargar.{80}", html, re.DOTALL):
+        print(f"[debug] contexto alrededor de 'escargar': {m.group(0)!r}")
     raise RuntimeError(
         "No se encontró el enlace de descarga en la ficha del dataset del NAP "
         "(puede que la página haya cambiado, o que el login haya fallado)"
@@ -92,6 +101,7 @@ def extraer_enlace_descarga(html: str) -> str:
 def descargar_zip(session: requests.Session) -> bytes:
     resp = session.get(NAP_DATASET_URL, timeout=30)
     resp.raise_for_status()
+    print(f"[debug] ficha dataset: status={resp.status_code} url_final={resp.url} tamaño={len(resp.text)}")
     href = extraer_enlace_descarga(resp.text)
 
     if "/Account/Login" in href:
