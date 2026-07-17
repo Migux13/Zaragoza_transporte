@@ -37,13 +37,23 @@ Copia `custom_components/zaragoza_transporte` a tu carpeta `custom_components` y
 - Tiempos en tiempo real: [API de datos abiertos del Ayuntamiento de Zaragoza](https://www.zaragoza.es/sede/portal/datos-abiertos/) (catálogos 327 tranvía y 335 autobús).
 - Catálogo de paradas: GTFS "Transporte urbano de Zaragoza" del NAP ([nap.transportes.gob.es](https://nap.transportes.gob.es)), base de datos libre y gratuita conforme a sus condiciones de uso.
 
-El GTFS caduca periódicamente; para regenerar el catálogo descarga el ZIP actualizado del NAP (cuenta gratuita) y ejecuta:
+El GTFS caduca periódicamente. Para regenerarlo a mano, descarga el ZIP actualizado del NAP (cuenta gratuita) y ejecuta:
 
 ```bash
 python3 tools/generar_postes.py fichero_gtfs.zip
 ```
 
 y coloca el `postes_bus.json` resultante en `custom_components/zaragoza_transporte/`.
+
+### Actualización automática
+
+El workflow [`.github/workflows/actualizar-gtfs.yml`](.github/workflows/actualizar-gtfs.yml) revisa cada lunes si el catálogo caduca en ≤7 días y, si es así, inicia sesión en el NAP, descarga el GTFS nuevo y abre una **Pull Request** con el `postes_bus.json` regenerado para revisarla antes de mergear (nunca hace push directo a `main`).
+
+Para activarlo, añade estos *secrets* en el repositorio (**Settings → Secrets and variables → Actions**):
+
+- `NAP_EMAIL` / `NAP_PASSWORD`: credenciales de una cuenta gratuita del NAP dedicada a esto (no reutilices una cuenta personal que uses para otras cosas).
+
+También se puede lanzar a mano desde la pestaña *Actions* → *Actualizar catálogo GTFS* → *Run workflow* (con la opción `forzar` para regenerar aunque no esté cerca de caducar).
 
 ## Hoja de ruta
 

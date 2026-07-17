@@ -16,7 +16,8 @@ import sys
 import zipfile
 
 
-def main(zip_path: str) -> None:
+def generar(zip_path: str) -> dict:
+    """Procesa el GTFS y devuelve el contenido de postes_bus.json (sin escribirlo)."""
     with zipfile.ZipFile(zip_path) as z:
         def rows(name):
             with z.open(name) as f:
@@ -44,15 +45,19 @@ def main(zip_path: str) -> None:
                 "lineas": sorted(stop_lineas.get(r["stop_id"], set())),
             }
 
-    out = {
+    return {
         "fuente": "GTFS NAP transportes.gob.es - Transporte urbano de Zaragoza",
         "version_feed": feed.get("feed_version", ""),
         "valido_hasta": feed.get("feed_end_date", ""),
         "postes": postes,
     }
-    with open("postes_bus.json", "w", encoding="utf-8") as f:
+
+
+def main(zip_path: str, out_path: str = "postes_bus.json") -> None:
+    out = generar(zip_path)
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"postes_bus.json generado: {len(postes)} postes "
+    print(f"{out_path} generado: {len(out['postes'])} postes "
           f"(feed {out['version_feed']}, válido hasta {out['valido_hasta']})")
 
 
