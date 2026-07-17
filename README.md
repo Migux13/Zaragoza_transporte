@@ -37,24 +37,6 @@ Copia `custom_components/zaragoza_transporte` a tu carpeta `custom_components` y
 - Tiempos en tiempo real: [API de datos abiertos del Ayuntamiento de Zaragoza](https://www.zaragoza.es/sede/portal/datos-abiertos/) (catálogos 327 tranvía y 335 autobús).
 - Catálogo de paradas: GTFS "Transporte urbano de Zaragoza" del NAP ([nap.transportes.gob.es](https://nap.transportes.gob.es)), base de datos libre y gratuita conforme a sus condiciones de uso.
 
-El GTFS caduca periódicamente. Para regenerarlo a mano, descarga el ZIP actualizado del NAP (cuenta gratuita) y ejecuta:
-
-```bash
-python3 tools/generar_postes.py fichero_gtfs.zip
-```
-
-y coloca el `postes_bus.json` resultante en `custom_components/zaragoza_transporte/`.
-
-### Regenerar el catálogo vía Pull Request automática
-
-El login del NAP usa reCAPTCHA, así que la descarga no se puede automatizar del todo. En su lugar:
-
-1. Descarga a mano el ZIP del GTFS desde el NAP (cuenta gratuita).
-2. Colócalo en `tools/gtfs_pendiente/` y haz push a `main`.
-3. El workflow [`.github/workflows/procesar-gtfs.yml`](.github/workflows/procesar-gtfs.yml) detecta el `.zip`, regenera `postes_bus.json`, borra el `.zip` y abre una **Pull Request** con el resultado para que la revises antes de mergear (nunca hace push directo a `main`).
-
-También se puede relanzar a mano desde la pestaña *Actions* → *Procesar GTFS subido a mano* → *Run workflow*.
-
 ## Hoja de ruta
 
 - Soporte GTFS-RT si Avanza publica el feed de tiempo real (ya lo suministra a terceros).
