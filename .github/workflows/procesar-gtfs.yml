@@ -1,0 +1,65 @@
+name: Procesar GTFS subido a mano
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - "tools/gtfs_pendiente/*.zip"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  procesar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Regenerar postes_bus.json a partir del ZIP subido
+        run: |
+          set -e
+          zip_file=$(ls tools/gtfs_pendiente/*.zip 2>/dev/null | head -n1)
+          if [ -z "$zip_file" ]; then
+            echo "No hay ningún .zip en tools/gtfs_pendiente/, nada que procesar."
+            exit 0
+          fi
+          echo "Procesando $zip_file"
+          python -c "
+          import sys
+          sys.path.insert(0, 'tools')
+          import generar_postes
+          generar_postes.main('$zip_file', out_path='custom_components/zaragoza_transporte/postes_bus.json')
+          "
+          rm -f tools/gtfs_pendiente/*.zip
+
+      - name: Comprobar si hay cambios
+        id: cambios
+        run: |
+          if git diff --quiet -- custom_components/zaragoza_transporte/postes_bus.json tools/gtfs_pendiente/; then
+            echo "hay_cambios=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "hay_cambios=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Abrir Pull Request
+        if: steps.cambios.outputs.hay_cambios == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Actualiza catálogo GTFS de paradas de bus"
+          title: "Actualización del catálogo GTFS (desde ZIP subido a mano)"
+          body: |
+            Catálogo de paradas de bus (`postes_bus.json`) regenerado a partir del
+            GTFS que se subió a `tools/gtfs_pendiente/`. El ZIP se elimina en este
+            mismo cambio para no dejarlo en el historial.
+
+            Revisa el diff antes de aceptar: número de postes, nombres y líneas
+            pueden haber cambiado con el nuevo GTFS. Recuerda subir la versión de
+            `manifest.json` y crear la release al mergear.
+          branch: actualizar-gtfs-automatico
+          delete-branch: true

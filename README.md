@@ -45,15 +45,15 @@ python3 tools/generar_postes.py fichero_gtfs.zip
 
 y coloca el `postes_bus.json` resultante en `custom_components/zaragoza_transporte/`.
 
-### Actualización automática
+### Regenerar el catálogo vía Pull Request automática
 
-El workflow [`.github/workflows/actualizar-gtfs.yml`](.github/workflows/actualizar-gtfs.yml) revisa cada lunes si el catálogo caduca en ≤7 días y, si es así, inicia sesión en el NAP, descarga el GTFS nuevo y abre una **Pull Request** con el `postes_bus.json` regenerado para revisarla antes de mergear (nunca hace push directo a `main`).
+El login del NAP usa reCAPTCHA, así que la descarga no se puede automatizar del todo. En su lugar:
 
-Para activarlo, añade estos *secrets* en el repositorio (**Settings → Secrets and variables → Actions**):
+1. Descarga a mano el ZIP del GTFS desde el NAP (cuenta gratuita).
+2. Colócalo en `tools/gtfs_pendiente/` y haz push a `main`.
+3. El workflow [`.github/workflows/procesar-gtfs.yml`](.github/workflows/procesar-gtfs.yml) detecta el `.zip`, regenera `postes_bus.json`, borra el `.zip` y abre una **Pull Request** con el resultado para que la revises antes de mergear (nunca hace push directo a `main`).
 
-- `NAP_EMAIL` / `NAP_PASSWORD`: credenciales de una cuenta gratuita del NAP dedicada a esto (no reutilices una cuenta personal que uses para otras cosas).
-
-También se puede lanzar a mano desde la pestaña *Actions* → *Actualizar catálogo GTFS* → *Run workflow* (con la opción `forzar` para regenerar aunque no esté cerca de caducar).
+También se puede relanzar a mano desde la pestaña *Actions* → *Procesar GTFS subido a mano* → *Run workflow*.
 
 ## Hoja de ruta
 
