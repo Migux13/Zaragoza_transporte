@@ -1,0 +1,46 @@
+name: Avisar caducidad GTFS
+
+"on":
+  schedule:
+    - cron: "0 6 * * 1" # todos los lunes a las 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Calcular días restantes
+        id: dias
+        run: |
+          restantes=$(python3 -c "
+          import json, datetime
+          with open('custom_components/zaragoza_transporte/postes_bus.json', encoding='utf-8') as f:
+              d = json.load(f)
+          fecha = datetime.datetime.strptime(d['valido_hasta'], '%Y%m%d').date()
+          print((fecha - datetime.date.today()).days)
+          ")
+          echo "restantes=$restantes" >> "$GITHUB_OUTPUT"
+          echo "El catálogo caduca en $restantes días"
+
+      - name: Comprobar si ya hay un aviso abierto
+        if: fromJSON(steps.dias.outputs.restantes) <= 7
+        id: existente
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh issue list --search 'in:title "Catálogo GTFS caduca pronto"' --state open --json number --jq 'length')
+          echo "existe=$n" >> "$GITHUB_OUTPUT"
+
+      - name: Abrir issue de aviso
+        if: fromJSON(steps.dias.outputs.restantes) <= 7 && steps.existente.outputs.existe == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Catálogo GTFS caduca pronto (quedan ${{ steps.dias.outputs.restantes }} días)" \
+            --body "El catálogo de paradas (\`postes_bus.json\`) caduca en ${{ steps.dias.outputs.restantes }} días. Sigue los pasos de [MANTENIMIENTO.md](https://github.com/${{ github.repository }}/blob/main/MANTENIMIENTO.md) para regenerarlo."

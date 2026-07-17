@@ -3,7 +3,10 @@
 ## Regenerar el catálogo de paradas (postes_bus.json)
 
 El GTFS caduca periódicamente (fecha en `valido_hasta` dentro de
-`custom_components/zaragoza_transporte/postes_bus.json`).
+`custom_components/zaragoza_transporte/postes_bus.json`). El workflow
+[`.github/workflows/avisar-caducidad-gtfs.yml`](.github/workflows/avisar-caducidad-gtfs.yml)
+comprueba esa fecha cada lunes y abre un *issue* de aviso si quedan ≤7 días
+(sin duplicarlo mientras siga abierto).
 
 ### A mano
 
