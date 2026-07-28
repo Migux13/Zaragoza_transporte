@@ -43,4 +43,4 @@ jobs:
         run: |
           gh issue create \
             --title "Catálogo GTFS caduca pronto (quedan ${{ steps.dias.outputs.restantes }} días)" \
-            --body "El catálogo de paradas (\`postes_bus.json\`) caduca en ${{ steps.dias.outputs.restantes }} días. Sigue los pasos de [MANTENIMIENTO.md](https://github.com/${{ github.repository }}/blob/main/MANTENIMIENTO.md) para regenerarlo."
+            --body "El catálogo de paradas (\`postes_bus.json\`) caduca en ${{ steps.dias.outputs.restantes }} días. Descarga el ZIP del NAP, colócalo en \`tools/gtfs_pendiente/\` y haz push: [procesar-gtfs.yml](https://github.com/${{ github.repository }}/blob/main/.github/workflows/procesar-gtfs.yml) abrirá la PR."
