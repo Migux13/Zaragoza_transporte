@@ -40,5 +40,18 @@
         "abort": {
             "already_configured": "Esta parada ya está configurada"
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Línea",
+                "description": "\"Todas - combinadas\" crea próximo/siguiente mezclando todas las líneas de la parada; \"Todas - una entidad por línea\" crea un par próximo/siguiente por cada línea.",
+                "data": { "linea": "Línea" }
+            }
+        },
+        "abort": {
+            "solo_bus": "Solo se puede reconfigurar una entrada de bus",
+            "parada_no_encontrada": "Esta parada ya no está en el catálogo GTFS"
+        }
     }
 }

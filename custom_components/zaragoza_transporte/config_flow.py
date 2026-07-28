@@ -1,4 +1,5 @@
 from homeassistant import config_entries
+from homeassistant.core import callback
 import voluptuous as vol
 from .const import DOMAIN, PARADAS
 from . import gtfs
@@ -176,5 +177,56 @@ class ZaragozaTransporteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="bus_linea",
             data_schema=vol.Schema({
                 vol.Required("linea", default=OPCION_COMBINADAS): vol.In(opciones),
+            }),
+        )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return ZaragozaTransporteOptionsFlow()
+
+
+class ZaragozaTransporteOptionsFlow(config_entries.OptionsFlow):
+    """Cambiar la línea o el modo de una entrada de bus ya creada, sin
+    tener que borrarla y volver a añadirla."""
+
+    async def async_step_init(self, user_input=None):
+        entry = self.config_entry
+        if entry.data.get("tipo") != "bus":
+            return self.async_abort(reason="solo_bus")
+
+        datos = await self.hass.async_add_executor_job(gtfs.get_poste, entry.data["poste"])
+        if datos is None:
+            return self.async_abort(reason="parada_no_encontrada")
+
+        opciones = [OPCION_COMBINADAS, OPCION_POR_LINEA] + datos["lineas"]
+
+        if user_input is not None:
+            linea = user_input["linea"]
+            modo_por_linea = linea == OPCION_POR_LINEA
+            if linea in (OPCION_COMBINADAS, OPCION_POR_LINEA):
+                linea = ""
+
+            nuevos_datos = dict(entry.data)
+            nuevos_datos["linea"] = linea
+            if modo_por_linea:
+                nuevos_datos["modo"] = "por_linea"
+                nuevos_datos["lineas"] = datos["lineas"]
+            else:
+                nuevos_datos.pop("modo", None)
+                nuevos_datos.pop("lineas", None)
+
+            self.hass.config_entries.async_update_entry(entry, data=nuevos_datos)
+            return self.async_create_entry(title="", data={})
+
+        if entry.data.get("modo") == "por_linea":
+            actual = OPCION_POR_LINEA
+        else:
+            actual = entry.data.get("linea") or OPCION_COMBINADAS
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Required("linea", default=actual): vol.In(opciones),
             }),
         )
