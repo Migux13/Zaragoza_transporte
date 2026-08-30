@@ -117,9 +117,11 @@ class ZaragozaTramSensor(SensorEntity):
         self._stop_name = stop_name
         self._tram_number = tram_number
         self._state = None
+        self._available = True
         self._name = f"Tranvía {tram_number} - {stop_name}"
         self._attr_icon = "mdi:tram"
-        self.entity_id = f"sensor.tranvia_{tram_number}_parada_{stop_id}"
+        self._attr_unique_id = f"{DOMAIN}_tram_{stop_id}_{tram_number}"
+        self._attr_suggested_object_id = f"tranvia_{tram_number}_parada_{stop_id}"
 
     @property
     def name(self):
@@ -129,26 +131,37 @@ class ZaragozaTramSensor(SensorEntity):
     def state(self):
         return self._state
 
+    @property
+    def available(self):
+        return self._available
+
     def update(self):
-        response = requests.get(API_URL)
+        try:
+            response = requests.get(API_URL, timeout=15)
+        except requests.RequestException:
+            self._available = False
+            return
 
-        if response.status_code == 200:
+        if response.status_code != 200:
+            self._available = False
+            return
+
+        try:
             data = response.json()
-            stops = data.get("result", [])
+        except ValueError:
+            self._available = False
+            return
 
-            # Find the stop with the given ID
-            stop_data = next((stop for stop in stops if str(stop["id"]) == str(self._stop_id)), None)
+        stops = data.get("result", [])
+        stop_data = next((stop for stop in stops if str(stop["id"]) == str(self._stop_id)), None)
 
-            if stop_data:
-                arrivals = stop_data.get("destinos", [])
-                if arrivals:
-                    self._state = arrivals[self._tram_number - 1].get("minutos")
-                else:
-                    self._state = "Sin datos"
-            else:
-                self._state = "Parada no encontrada"
-        else:
-            self._state = "Error al conectar"
+        if not stop_data:
+            self._available = False
+            return
+
+        arrivals = stop_data.get("destinos", [])
+        self._state = arrivals[self._tram_number - 1].get("minutos") if arrivals else None
+        self._available = True
 
 
 class ZaragozaBusSensor(SensorEntity):
@@ -179,11 +192,11 @@ class ZaragozaBusSensor(SensorEntity):
         if linea:
             self._name = f"Bus {linea} {etiqueta} - {lugar}"
             self._attr_unique_id = f"{DOMAIN}_bus_{poste}_{linea}_{bus_number}"
-            self.entity_id = f"sensor.bus_{linea.lower()}_{etiqueta_id}_parada_{poste}"
+            self._attr_suggested_object_id = f"bus_{linea.lower()}_{etiqueta_id}_parada_{poste}"
         else:
             self._name = f"Bus {etiqueta} - {lugar}"
             self._attr_unique_id = f"{DOMAIN}_bus_{poste}_{bus_number}"
-            self.entity_id = f"sensor.bus_{etiqueta_id}_parada_{poste}"
+            self._attr_suggested_object_id = f"bus_{etiqueta_id}_parada_{poste}"
 
     @property
     def name(self):
